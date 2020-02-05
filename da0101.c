@@ -65,14 +65,39 @@ struct	Data {
 /******************************************************************************
  ******* static variables *****************************************************
  ******************************************************************************/
-static	const char	*url	= "https://s3-api.us-geo.objectstorage.softlayer.net/cf-courses-data/CognitiveClass/DA0101EN/auto.csv";
-static	const char	*headers[]	= [
+static	const char	*const url	= "https://s3-api.us-geo.objectstorage.softlayer.net/cf-courses-data/CognitiveClass/DA0101EN/auto.csv";
+static	const char	*const headers[]	= [
 	"symboling", "normalized-losses", "make", "fuel-type", "aspiration",
 	"num-of-doors", "body-style", "drive-wheels", "engine-location",
 	"wheel-base", "length", "width", "height", "curb-weight",
 	"engine-type", "num-of-cylinders", "engine-size", "fuel-system",
 	"bore", "stroke", "compression-ratio", "horsepower", "peak-rpm",
 	"city-mpg", "highway-mpg", "price"];
+static	const char	*const makes[]	= [
+	"Alfa-Romero",
+	"Audi",
+	"BMW",
+	"Chevrolet",
+	"Dodge",
+	"Honda",
+	"Isuzu",
+	"Jaguar",
+	"Mazda",
+	"Mercedes-Benz",
+	"Mercury",
+	"Mitsubishi",
+	"Nissan",
+	"Peugeot",
+	"Plymouth",
+	"Porsche",
+	"BMW",
+	"BMW",
+	"BMW",
+	"BMW",
+	"BMW",
+	"BMW",
+	"BMW",
+	"BMW",
 static	ptrdiff_t	nrow;
 static	ptrdiff_t	ncol;
 
@@ -197,9 +222,12 @@ void	less_data	(const char *fname)
 static
 void	prn_data	(const char *fname)
 {
+	FILE	*less;
 	char	cmd[_POSIX_ARG_MAX];
 
-	printf("
+	less	= popen("less -S", "w");
+
+	fprintf("
 	for (ptrdiff_t i = 1; i < FIELDS; i++) {
 		printf("
 
@@ -210,6 +238,84 @@ void	prn_data	(const char *fname)
 	if (system(cmd))
 		errorx(EXIT_FAILURE, cmd);
 }
+
+struct	Data_Frame {
+	int	symboling;
+	int	norm_losses;
+	int	make;
+	int	fuel;
+	bool	aspiration;
+	int	doors;
+	int	style;
+	int	drive_wh;
+	int	engine_pos;
+	double	wheel_base;
+	double	length;
+	double	width;
+	double	height;
+	int	curb_weight;
+	int	engine_type;
+	int	cylinders;
+	int	engine_size;
+	int	fuel_system;
+	double	bore;
+	double	stroke;
+	double	compression_ratio;
+	int	hp;
+	int	peak_rpm;
+	int	city_mpg;
+	int	hiway_mpg;
+	int	price;
+};
+static
+void	prn_row		(const struct Data_Frame *row, FILE *less)
+{
+	char	cmd[_POSIX_ARG_MAX];
+
+	fprintf(less, "%2i", row->symboling);
+	if (row->norm_losses == -1)
+		fprintf(less, " %2s", "?");
+	else
+		fprintf(less, " %2i", row->norm_losses);
+	fprintf(less, " %15s", row->make);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, "%2i", row->symboling);
+	for (ptrdiff_t i = 1; i < FIELDS; i++) {
+		printf("
+
+
+
+	if (sbprintf(cmd, NULL, "less %s", fname))
+		errorx(EXIT_FAILURE, fname);
+	if (system(cmd))
+		errorx(EXIT_FAILURE, cmd);
+}
+
+static
+void	printf_less	()
+{
+	FILE	*fin, *fout;
+	int	fd[2];
+
+	
+}
+
+static	less_from_pipe
 
 static
 void	parse_field	(void *parsed, size_t size, void *data)
