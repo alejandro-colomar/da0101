@@ -109,9 +109,14 @@ LDFLAGS_OPT    += -flto
 LDFLAGS_OPT    += -fuse-linker-plugin
 
 LDFLAGS_PKG	= `pkg-config --libs libalx-base`
+LDFLAGS_PKG    += `pkg-config --libs libalx-data-structures`
+LDFLAGS_PKG    += -l csv
+
+LDFLAGS_STD	= -l m
 
 LDFLAGS		= $(LDFLAGS_OPT)
 LDFLAGS        += $(LDFLAGS_PKG)
+LDFLAGS        += $(LDFLAGS_STD)
 
 export	LDFLAGS
 
