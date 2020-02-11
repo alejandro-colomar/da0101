@@ -25,6 +25,7 @@
 #include <libalx/base/libgen/basename.h>
 #include <libalx/base/stdio/printf/sbprintf.h>
 #include <libalx/base/stdio/printf/snprintfs.h>
+#include <libalx/base/stdlib/compare.h>
 #include <libalx/base/stdlib/strto/strtof_s.h>
 #include <libalx/base/stdlib/strto/strtoi_s.h>
 
@@ -128,6 +129,18 @@ static
 void	less_data	(const char *fname);
 
 static
+int	cmp_data		(int64_t user_key, int64_t ds_key,
+				 const void *user_data, const void *ds_data);
+/*
+static
+int	cmp_key			(int64_t user_key, int64_t ds_key,
+				 const void *user_data, const void *ds_data);*/
+static
+int	init_text_values	(struct Text_Values *values);
+static
+void	deinit_text_values	(struct Text_Values *values);
+
+static
 void	parse_field	(void *restrict parsed, size_t size,
 			 void *restrict data);
 static
@@ -140,7 +153,7 @@ void	parse_row	(int c, void *data);
 int	main	(void)
 {
 	char			file[FILENAME_MAX];
-	struct Data		data;
+	struct Data		data = {0};
 	struct csv_parser	parser;
 	FILE			*fp;
 	size_t			n;
@@ -154,7 +167,10 @@ int	main	(void)
 
 	if (alx_llist_init(&data.rows))
 		errorx(EXIT_FAILURE, "llist_init()");
-
+	if (init_text_values(&data.values)) {
+		status	= EXIT_FAILURE;
+		goto out_values;
+	}
 	if (csv_init(&parser, CSV_STRICT_FINI | CSV_APPEND_NULL)) {
 		perrorx("csv_init()");
 		status	= EXIT_FAILURE;
@@ -193,6 +209,8 @@ out_parse:
 out_file:
 	csv_free(&parser);
 out_csv:
+	deinit_text_values(&data.values);
+out_values:
 	alx_llist_deinit(data.rows);
 
 	return	status;
@@ -303,6 +321,141 @@ void	printf_less	()
 
 static	less_from_pipe
 */
+
+static
+int	cmp_data		(int64_t user_key, int64_t ds_key,
+				 const void *user_data, const void *ds_data)
+{
+
+	ALX_UNUSED(user_key);
+	ALX_UNUSED(ds_key);
+
+	return	strcasecmp(user_data, ds_data);
+}
+/*
+static
+int	cmp_key			(int64_t user_key, int64_t ds_key,
+				 const void *user_data, const void *ds_data)
+{
+
+	ALX_UNUSED(user_data);
+	ALX_UNUSED(ds_data);
+
+	return	alx_compare_s64(&user_key, &ds_key);
+}
+*/
+static
+int	init_text_values	(struct Text_Values *values)
+{
+
+	if (alx_bst_init(&values->make, cmp_data, false))
+		return	ENOMEM;
+	if (alx_bst_init(&values->fuel_type, cmp_data, false))
+		goto err1;
+	if (alx_bst_init(&values->aspiration, cmp_data, false))
+		goto err2;
+	if (alx_bst_init(&values->doors, cmp_data, false))
+		goto err3;
+	if (alx_bst_init(&values->style, cmp_data, false))
+		goto err4;
+	if (alx_bst_init(&values->drive_wh, cmp_data, false))
+		goto err5;
+	if (alx_bst_init(&values->engine_pos, cmp_data, false))
+		goto err6;
+	if (alx_bst_init(&values->engine_type, cmp_data, false))
+		goto err7;
+	if (alx_bst_init(&values->cylinders, cmp_data, false))
+		goto err8;
+	if (alx_bst_init(&values->fuel_system, cmp_data, false))
+		goto err9;
+
+	return	0;
+err9:
+	alx_bst_deinit(values->cylinders);
+err8:
+	alx_bst_deinit(values->engine_type);
+err7:
+	alx_bst_deinit(values->engine_pos);
+err6:
+	alx_bst_deinit(values->drive_wh);
+err5:
+	alx_bst_deinit(values->style);
+err4:
+	alx_bst_deinit(values->doors);
+err3:
+	alx_bst_deinit(values->aspiration);
+err2:
+	alx_bst_deinit(values->fuel_type);
+err1:
+	alx_bst_deinit(values->make);
+	perrorx(NULL);
+	return	ENOMEM;
+}
+
+static
+int	sort_text_values	(struct Text_Values *values)
+{
+
+	if (alx_bst_init(&values->make, cmp_data, false))
+		return	ENOMEM;
+	if (alx_bst_init(&values->fuel_type, cmp_data, false))
+		goto err1;
+	if (alx_bst_init(&values->aspiration, cmp_data, false))
+		goto err2;
+	if (alx_bst_init(&values->doors, cmp_data, false))
+		goto err3;
+	if (alx_bst_init(&values->style, cmp_data, false))
+		goto err4;
+	if (alx_bst_init(&values->drive_wh, cmp_data, false))
+		goto err5;
+	if (alx_bst_init(&values->engine_pos, cmp_data, false))
+		goto err6;
+	if (alx_bst_init(&values->engine_type, cmp_data, false))
+		goto err7;
+	if (alx_bst_init(&values->cylinders, cmp_data, false))
+		goto err8;
+	if (alx_bst_init(&values->fuel_system, cmp_data, false))
+		goto err9;
+
+	return	0;
+err9:
+	alx_bst_deinit(values->cylinders);
+err8:
+	alx_bst_deinit(values->engine_type);
+err7:
+	alx_bst_deinit(values->engine_pos);
+err6:
+	alx_bst_deinit(values->drive_wh);
+err5:
+	alx_bst_deinit(values->style);
+err4:
+	alx_bst_deinit(values->doors);
+err3:
+	alx_bst_deinit(values->aspiration);
+err2:
+	alx_bst_deinit(values->fuel_type);
+err1:
+	alx_bst_deinit(values->make);
+	perrorx(NULL);
+	return	ENOMEM;
+}
+
+static
+void	deinit_text_values	(struct Text_Values *values)
+{
+
+	alx_bst_deinit(values->fuel_system);
+	alx_bst_deinit(values->cylinders);
+	alx_bst_deinit(values->engine_type);
+	alx_bst_deinit(values->engine_pos);
+	alx_bst_deinit(values->drive_wh);
+	alx_bst_deinit(values->style);
+	alx_bst_deinit(values->doors);
+	alx_bst_deinit(values->aspiration);
+	alx_bst_deinit(values->fuel_type);
+	alx_bst_deinit(values->make);
+}
+
 static
 void	parse_field_text	(void *restrict parsed, size_t size,
 				 struct Data_Frame *restrict row,
