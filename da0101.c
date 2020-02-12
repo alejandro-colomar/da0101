@@ -110,7 +110,7 @@ struct	Llist_Data {
  ******* static variables *****************************************************
  ******************************************************************************/
 static	const char	*const url	= "https://s3-api.us-geo.objectstorage.softlayer.net/cf-courses-data/CognitiveClass/DA0101EN/auto.csv";
-/*static	const char	*const headers[]	= {
+static	const char	*const headers[]	= {
 	"symboling",		"normalized-losses",	"make",
 	"fuel-type",		"aspiration",		"num-of-doors",
 	"body-style",		"drive-wheels",		"engine-location",
@@ -119,7 +119,7 @@ static	const char	*const url	= "https://s3-api.us-geo.objectstorage.softlayer.ne
 	"num-of-cylinders",	"engine-size",		"fuel-system",
 	"bore",			"stroke",		"compression-ratio",
 	"horsepower",		"peak-rpm",		"city-mpg",
-	"highway-mpg",		"price"			};*/
+	"highway-mpg",		"price"			};
 
 
 /******************************************************************************
@@ -129,9 +129,7 @@ static
 void	wget		(const char *url);
 static
 void	get_fname	(char fname[static restrict FILENAME_MAX],
-			 const char *restrict url);/*
-static
-void	less_data		(const char *fname);*/
+			 const char *restrict url);
 
 static
 int	prn_values	(struct Alx_Node *val, void *nul);
@@ -185,6 +183,9 @@ int	main	(void)
 	char			buf[BUFSIZ];
 	int			status;
 
+	(void)prn_values;
+	(void)headers;
+
 	status	= 0;
 
 	wget(url);
@@ -225,18 +226,12 @@ int	main	(void)
 		goto out_parse;
 	}
 
-	(void)alx_bst_apply(data.values.make, prn_values, NULL);
-	(void)alx_bst_apply(data.values.fuel_type, prn_values, NULL);
 	if (sort_text_values(&data.values)) {
 		status	= EXIT_FAILURE;
 		goto out_parse;
 	}
-	(void)alx_bst_apply(data.values.make, prn_values, NULL);
-	(void)alx_bst_apply(data.values.fuel_type, prn_values, NULL);
 
 	prn_data(&data);
-
-//	less_data(file);
 
 	return	0;
 
@@ -275,18 +270,7 @@ void	get_fname	(char fname[static restrict FILENAME_MAX],
 	if (basename_s(fname, url))
 		errorx(EXIT_FAILURE, url);
 }
-/*
-static
-void	less_data	(const char *fname)
-{
-	char	cmd[_POSIX_ARG_MAX];
 
-	if (sbprintf(cmd, NULL, "less %s", fname))
-		errorx(EXIT_FAILURE, fname);
-	if (system(cmd))
-		errorx(EXIT_FAILURE, cmd);
-}
-*/
 static
 void	prn_data	(struct Data *data)
 {
@@ -378,18 +362,7 @@ void	prn_row		(struct Text_Values *restrict values,
 	fprintf(less, " %11i", row->city_mpg);
 	fprintf(less, " %11i", row->hiway_mpg);
 	fprintf(less, " %11i\n", row->price);
-}/*
-static
-void	printf_less	()
-{
-	FILE	*fin, *fout;
-	int	fd[2];
-
-	
 }
-
-static	less_from_pipe
-*/
 
 static
 int	cmp_data		(int64_t user_key, int64_t ds_key,
