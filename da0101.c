@@ -100,6 +100,11 @@ struct	Data {
 	ptrdiff_t		ncol;
 };
 
+struct	Llist_Data {
+	struct Text_Values	*values;
+	FILE			*less;
+};
+
 
 /******************************************************************************
  ******* static variables *****************************************************
@@ -124,9 +129,22 @@ static
 void	wget		(const char *url);
 static
 void	get_fname	(char fname[static restrict FILENAME_MAX],
-			 const char *restrict url);
+			 const char *restrict url);/*
 static
-void	less_data	(const char *fname);
+void	less_data		(const char *fname);*/
+
+static
+int	prn_values	(struct Alx_Node *val, void *nul);
+static
+void	prn_data		(struct Data *data);
+static
+int	prn_row_wrap		(struct Alx_LinkedList *rows,
+				 struct Alx_Node *node,
+				 void *data, ptrdiff_t nrow);
+static
+void	prn_row		(struct Text_Values *restrict values,
+				 const struct Data_Frame *restrict row,
+				 FILE *restrict less);
 
 static
 int	cmp_data		(int64_t user_key, int64_t ds_key,
@@ -142,6 +160,11 @@ int	sort_text_values	(struct Text_Values *values);
 static
 void	deinit_text_values	(struct Text_Values *values);
 
+static
+void	parse_field_text	(void *restrict parsed, size_t size,
+				 int32_t *restrict rowcol,
+				 bool *restrict error,
+				 struct Alx_BST *restrict values);
 static
 void	parse_field	(void *restrict parsed, size_t size,
 			 void *restrict data);
@@ -196,26 +219,24 @@ int	main	(void)
 			status	= EXIT_FAILURE;
 			goto out_parse;
 		}
-			perrorx("HI!");
 	} while (n);
-			perrorx("He!");
 	if (csv_fini(&parser, &parse_field, &parse_row, &data)) {
 		status	= EXIT_FAILURE;
 		goto out_parse;
 	}
-			perrorx("Ho!");
 
+	(void)alx_bst_apply(data.values.make, prn_values, NULL);
+	(void)alx_bst_apply(data.values.fuel_type, prn_values, NULL);
 	if (sort_text_values(&data.values)) {
 		status	= EXIT_FAILURE;
 		goto out_parse;
 	}
-			perrorx("Hu!");
+	(void)alx_bst_apply(data.values.make, prn_values, NULL);
+	(void)alx_bst_apply(data.values.fuel_type, prn_values, NULL);
 
+	prn_data(&data);
 
-
-
-
-	less_data(file);
+//	less_data(file);
 
 	return	0;
 
@@ -254,7 +275,7 @@ void	get_fname	(char fname[static restrict FILENAME_MAX],
 	if (basename_s(fname, url))
 		errorx(EXIT_FAILURE, url);
 }
-
+/*
 static
 void	less_data	(const char *fname)
 {
@@ -265,66 +286,99 @@ void	less_data	(const char *fname)
 	if (system(cmd))
 		errorx(EXIT_FAILURE, cmd);
 }
-
-/*
+*/
 static
-void	prn_data	(const char *fname)
+void	prn_data	(struct Data *data)
 {
 	FILE	*less;
-	char	cmd[_POSIX_ARG_MAX];
+	struct Llist_Data	d;
+
+	d.values	= &data->values;
 
 	less	= popen("less -S", "w");
+	d.less	= less;
 
-	fprintf("
-	for (ptrdiff_t i = 1; i < FIELDS; i++) {
-		printf("
+	alx_llist_apply(data->rows, &prn_row_wrap, &d);
 
-
-
-	if (sbprintf(cmd, NULL, "less %s", fname))
-		errorx(EXIT_FAILURE, fname);
-	if (system(cmd))
-		errorx(EXIT_FAILURE, cmd);
+	pclose(less);
 }
 
 static
-void	prn_row		(const struct Data_Frame *row, FILE *less)
+int	prn_row_wrap		(struct Alx_LinkedList *rows,
+				 struct Alx_Node *node,
+				 void *data, ptrdiff_t nrow)
 {
-	char	cmd[_POSIX_ARG_MAX];
+	struct Llist_Data	*d;
 
-	fprintf(less, "%2i", row->symboling);
-	if (row->norm_losses == -1)
-		fprintf(less, " %2s", "?");
-	else
-		fprintf(less, " %2i", row->norm_losses);
-	fprintf(less, " %15s", row->make);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	fprintf(less, "%2i", row->symboling);
-	for (ptrdiff_t i = 1; i < FIELDS; i++) {
-		printf("
+	d	= data;
+	ALX_UNUSED(rows);
+	ALX_UNUSED(nrow);
 
-
-
-	if (sbprintf(cmd, NULL, "less %s", fname))
-		errorx(EXIT_FAILURE, fname);
-	if (system(cmd))
-		errorx(EXIT_FAILURE, cmd);
+	prn_row(d->values, (void *)node->buf->data, d->less);
+	return	0;
 }
+
+static
+int	prn_values	(struct Alx_Node *val, void *nul)
+{
+	(void)nul;
+
+	printf("%li k;	%s;\n", val->key, val->buf->data);
+
+	return	0;
+}
+
+static
+void	prn_row		(struct Text_Values *restrict values,
+				 const struct Data_Frame *restrict row,
+				 FILE *restrict less)
+{
+	struct Alx_Node	*tmp;
+
+	fprintf(less, "%2i", row->symboling);
+	fprintf(less, " %11i", row->norm_losses);
+	if (alx_bst_find(&tmp, values->make, row->make, NULL))
+		perrorx("make");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->fuel_type, row->fuel_type, NULL))
+		perrorx("fuel_type");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->aspiration, row->aspiration, NULL))
+		perrorx("aspiration");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->doors, row->doors, NULL))
+		perrorx("doors");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->style, row->style, NULL))
+		perrorx("style");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->drive_wh, row->drive_wh, NULL))
+		perrorx("drive_wh");
+	fprintf(less, " %15s", tmp->buf->data);
+	if (alx_bst_find(&tmp, values->engine_pos, row->engine_pos, NULL))
+		perrorx("engine_pos");
+	fprintf(less, " %15s", tmp->buf->data);
+	fprintf(less, " %8.2lf", row->wheel_base);
+	fprintf(less, " %8.2lf", row->length);
+	fprintf(less, " %8.2lf", row->width);
+	fprintf(less, " %8.2lf", row->height);
+	fprintf(less, " %11i", row->curb_weight);
+	if (alx_bst_find(&tmp, values->cylinders, row->cylinders, NULL))
+		perrorx("cylinders");
+	fprintf(less, " %15s", tmp->buf->data);
+	fprintf(less, " %11i", row->engine_size);
+	if (alx_bst_find(&tmp, values->fuel_system, row->fuel_system, NULL))
+		perrorx("fuel_system");
+	fprintf(less, " %15s", tmp->buf->data);
+	fprintf(less, " %8.2lf", row->bore);
+	fprintf(less, " %8.2lf", row->stroke);
+	fprintf(less, " %8.2lf", row->compression_ratio);
+	fprintf(less, " %11i", row->hp);
+	fprintf(less, " %11i", row->peak_rpm);
+	fprintf(less, " %11i", row->city_mpg);
+	fprintf(less, " %11i", row->hiway_mpg);
+	fprintf(less, " %11i\n", row->price);
+}/*
 static
 void	printf_less	()
 {
@@ -345,7 +399,7 @@ int	cmp_data		(int64_t user_key, int64_t ds_key,
 	ALX_UNUSED(user_key);
 	ALX_UNUSED(ds_key);
 
-	return	strcasecmp(user_data, ds_data);
+	return	-strcasecmp(user_data, ds_data);
 }
 
 static
@@ -356,7 +410,7 @@ int	cmp_key			(int64_t user_key, int64_t ds_key,
 	ALX_UNUSED(user_data);
 	ALX_UNUSED(ds_data);
 
-	return	alx_compare_s64(&user_key, &ds_key);
+	return	-alx_compare_s64(&user_key, &ds_key);
 }
 
 static
@@ -365,23 +419,43 @@ int	init_text_values	(struct Text_Values *values)
 
 	if (alx_bst_init(&values->make, cmp_data, false))
 		goto err0;
+	if (alx_bst_insert(values->make, 0, "?", strlen("err") + 1))
+		goto err0;
 	if (alx_bst_init(&values->fuel_type, cmp_data, false))
+		goto err1;
+	if (alx_bst_insert(values->fuel_type, 0, "?", strlen("err") + 1))
 		goto err1;
 	if (alx_bst_init(&values->aspiration, cmp_data, false))
 		goto err2;
+	if (alx_bst_insert(values->aspiration, 0, "?", strlen("err") + 1))
+		goto err2;
 	if (alx_bst_init(&values->doors, cmp_data, false))
+		goto err3;
+	if (alx_bst_insert(values->doors, 0, "?", strlen("err") + 1))
 		goto err3;
 	if (alx_bst_init(&values->style, cmp_data, false))
 		goto err4;
+	if (alx_bst_insert(values->style, 0, "?", strlen("err") + 1))
+		goto err4;
 	if (alx_bst_init(&values->drive_wh, cmp_data, false))
+		goto err5;
+	if (alx_bst_insert(values->drive_wh, 0, "?", strlen("err") + 1))
 		goto err5;
 	if (alx_bst_init(&values->engine_pos, cmp_data, false))
 		goto err6;
+	if (alx_bst_insert(values->engine_pos, 0, "?", strlen("err") + 1))
+		goto err6;
 	if (alx_bst_init(&values->engine_type, cmp_data, false))
+		goto err7;
+	if (alx_bst_insert(values->engine_type, 0, "?", strlen("err") + 1))
 		goto err7;
 	if (alx_bst_init(&values->cylinders, cmp_data, false))
 		goto err8;
+	if (alx_bst_insert(values->cylinders, 0, "?", strlen("err") + 1))
+		goto err8;
 	if (alx_bst_init(&values->fuel_system, cmp_data, false))
+		goto err9;
+	if (alx_bst_insert(values->fuel_system, 0, "?", strlen("err") + 1))
 		goto err9;
 
 	return	0;
@@ -475,22 +549,23 @@ void	deinit_text_values	(struct Text_Values *values)
 
 static
 void	parse_field_text	(void *restrict parsed, size_t size,
-				 struct Data_Frame *restrict row,
+				 int32_t *restrict rowcol,
+				 bool *restrict error,
 				 struct Alx_BST *restrict values)
 {
 	struct Alx_Node	*tmp;
 	int		key;
 
 	if (!alx_bst_find(&tmp, values, 0, parsed)) {
-		row->make = tmp->key;
+		*rowcol	= tmp->key;
 	} else {
 		key = values->key_max + 1;
 		if (alx_bst_insert(values, key, parsed, size)) {
-			row->make	= INT_MIN;
-			row->error	= true;
+			*rowcol	= INT_MIN;
+			*error	= true;
 			return;
 		}
-		row->make = key;
+		*rowcol = key;
 	}
 }
 
@@ -505,142 +580,126 @@ void	parse_field		(void *restrict parsed, size_t size,
 		if (strtoi32_s(&d->row.symboling, parsed, 0, NULL)) {
 			d->row.symboling	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_NORM_LOSSES:
 		if (strtoi32_s(&d->row.norm_losses, parsed, 0, NULL)) {
 			d->row.norm_losses	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_MAKE:
-		parse_field_text(parsed, size, &d->row, d->values.make);
+		parse_field_text(parsed, size, &d->row.make, &d->row.error, d->values.make);
 		break;
 	case DF_FUEL_TYPE:
-		parse_field_text(parsed, size, &d->row, d->values.fuel_type);
+		parse_field_text(parsed, size, &d->row.fuel_type, &d->row.error, d->values.fuel_type);
 		break;
 	case DF_ASPIRATION:
-		parse_field_text(parsed, size, &d->row, d->values.aspiration);
+		parse_field_text(parsed, size, &d->row.aspiration, &d->row.error, d->values.aspiration);
 		break;
 	case DF_DOORS:
-		parse_field_text(parsed, size, &d->row, d->values.doors);
+		parse_field_text(parsed, size, &d->row.doors, &d->row.error, d->values.doors);
 		break;
 	case DF_STYLE:
-		parse_field_text(parsed, size, &d->row, d->values.style);
+		parse_field_text(parsed, size, &d->row.style, &d->row.error, d->values.style);
 		break;
 	case DF_DRIVE_WH:
-		parse_field_text(parsed, size, &d->row, d->values.drive_wh);
+		parse_field_text(parsed, size, &d->row.drive_wh, &d->row.error, d->values.drive_wh);
 		break;
 	case DF_ENGINE_POS:
-		parse_field_text(parsed, size, &d->row, d->values.engine_pos);
+		parse_field_text(parsed, size, &d->row.engine_pos, &d->row.error, d->values.engine_pos);
 		break;
 	case DF_WHEEL_BASE:
 		if (strtod_s(&d->row.wheel_base, parsed, NULL)) {
 			d->row.wheel_base	= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_LENGTH:
 		if (strtod_s(&d->row.length, parsed, NULL)) {
 			d->row.length		= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_WIDTH:
 		if (strtod_s(&d->row.width, parsed, NULL)) {
 			d->row.width		= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_HEIGHT:
 		if (strtod_s(&d->row.height, parsed, NULL)) {
 			d->row.height		= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_CURB_WEIGHT:
 		if (strtoi32_s(&d->row.curb_weight, parsed, 0, NULL)) {
 			d->row.curb_weight	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_ENGINE_TYPE:
-		parse_field_text(parsed, size, &d->row, d->values.engine_type);
+		parse_field_text(parsed, size, &d->row.engine_type, &d->row.error, d->values.engine_type);
 		break;
 	case DF_CYLINDERS:
-		parse_field_text(parsed, size, &d->row, d->values.cylinders);
+		parse_field_text(parsed, size, &d->row.cylinders, &d->row.error, d->values.cylinders);
 		break;
 	case DF_ENGINE_SIZE:
 		if (strtoi32_s(&d->row.engine_size, parsed, 0, NULL)) {
 			d->row.engine_size	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_FUEL_SYSTEM:
-		parse_field_text(parsed, size, &d->row, d->values.fuel_system);
+		parse_field_text(parsed, size, &d->row.fuel_system, &d->row.error, d->values.fuel_system);
 		break;
 	case DF_BORE:
 		if (strtod_s(&d->row.bore, parsed, NULL)) {
 			d->row.bore		= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_STROKE:
 		if (strtod_s(&d->row.stroke, parsed, NULL)) {
 			d->row.stroke		= nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_COMPRESSION_RATIO:
 		if (strtod_s(&d->row.compression_ratio, parsed, NULL) < 0) {
 			d->row.compression_ratio = nan("");
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_HP:
 		if (strtoi32_s(&d->row.hp, parsed, 0, NULL) < 0) {
 			d->row.hp		= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_PEAK_RPM:
 		if (strtoi32_s(&d->row.peak_rpm, parsed, 0, NULL) < 0) {
 			d->row.peak_rpm	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_CITY_MPG:
 		if (strtoi32_s(&d->row.city_mpg, parsed, 0, NULL) < 0) {
 			d->row.city_mpg	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_HIWAY_MPG:
 		if (strtoi32_s(&d->row.hiway_mpg, parsed, 0, NULL) < 0) {
 			d->row.hiway_mpg	= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	case DF_PRICE:
 		if (strtoi32_s(&d->row.price, parsed, 0, NULL) < 0) {
 			d->row.price		= INT_MIN;
 			d->row.error		= true;
-			perrorx(parsed);
 		}
 		break;
 	default:
