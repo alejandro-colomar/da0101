@@ -38,12 +38,12 @@
  ******* enum / struct / union ************************************************
  ******************************************************************************/
 enum	Data_Frame_e {
-	DF_SYMBOLING,		DF_NORM_LOSSES,		DF_MAKE,
+	DF_SYMBOLING,		DF_NORM_LOSSES,	DF_MAKE,
 	DF_FUEL_TYPE,		DF_ASPIRATION,		DF_DOORS,
 	DF_STYLE,		DF_DRIVE_WH,		DF_ENGINE_POS,
 	DF_WHEEL_BASE,		DF_LENGTH,		DF_WIDTH,
-	DF_HEIGHT,		DF_CURB_WEIGHT,		DF_ENGINE_TYPE,
-	DF_CYLINDERS,		DF_ENGINE_SIZE,		DF_FUEL_SYSTEM,
+	DF_HEIGHT,		DF_CURB_WEIGHT,	DF_ENGINE_TYPE,
+	DF_CYLINDERS,		DF_ENGINE_SIZE,	DF_FUEL_SYSTEM,
 	DF_BORE,		DF_STROKE,		DF_COMPRESSION_RATIO,
 	DF_HP,			DF_PEAK_RPM,		DF_CITY_MPG,
 	DF_HIWAY_MPG,		DF_PRICE
@@ -131,12 +131,14 @@ void	less_data	(const char *fname);
 static
 int	cmp_data		(int64_t user_key, int64_t ds_key,
 				 const void *user_data, const void *ds_data);
-/*
 static
-int	cmp_key			(int64_t user_key, int64_t ds_key,
-				 const void *user_data, const void *ds_data);*/
+int	cmp_key		(int64_t user_key, int64_t ds_key,
+				 const void *user_data, const void *ds_data);
+
 static
 int	init_text_values	(struct Text_Values *values);
+static
+int	sort_text_values	(struct Text_Values *values);
 static
 void	deinit_text_values	(struct Text_Values *values);
 
@@ -171,7 +173,7 @@ int	main	(void)
 		status	= EXIT_FAILURE;
 		goto out_values;
 	}
-	if (csv_init(&parser, CSV_STRICT_FINI | CSV_APPEND_NULL)) {
+	if (csv_init(&parser, CSV_STRICT | CSV_STRICT_FINI | CSV_APPEND_NULL)) {
 		perrorx("csv_init()");
 		status	= EXIT_FAILURE;
 		goto out_csv;
@@ -194,9 +196,22 @@ int	main	(void)
 			status	= EXIT_FAILURE;
 			goto out_parse;
 		}
+			perrorx("HI!");
 	} while (n);
+			perrorx("He!");
+	if (csv_fini(&parser, &parse_field, &parse_row, &data)) {
+		status	= EXIT_FAILURE;
+		goto out_parse;
+	}
+			perrorx("Ho!");
 
-	
+	if (sort_text_values(&data.values)) {
+		status	= EXIT_FAILURE;
+		goto out_parse;
+	}
+			perrorx("Hu!");
+
+
 
 
 
@@ -332,7 +347,7 @@ int	cmp_data		(int64_t user_key, int64_t ds_key,
 
 	return	strcasecmp(user_data, ds_data);
 }
-/*
+
 static
 int	cmp_key			(int64_t user_key, int64_t ds_key,
 				 const void *user_data, const void *ds_data)
@@ -343,13 +358,13 @@ int	cmp_key			(int64_t user_key, int64_t ds_key,
 
 	return	alx_compare_s64(&user_key, &ds_key);
 }
-*/
+
 static
 int	init_text_values	(struct Text_Values *values)
 {
 
 	if (alx_bst_init(&values->make, cmp_data, false))
-		return	ENOMEM;
+		goto err0;
 	if (alx_bst_init(&values->fuel_type, cmp_data, false))
 		goto err1;
 	if (alx_bst_init(&values->aspiration, cmp_data, false))
@@ -388,6 +403,7 @@ err2:
 	alx_bst_deinit(values->fuel_type);
 err1:
 	alx_bst_deinit(values->make);
+err0:
 	perrorx(NULL);
 	return	ENOMEM;
 }
@@ -396,25 +412,25 @@ static
 int	sort_text_values	(struct Text_Values *values)
 {
 
-	if (alx_bst_init(&values->make, cmp_data, false))
-		return	ENOMEM;
-	if (alx_bst_init(&values->fuel_type, cmp_data, false))
+	if (alx_bst_reorder(values->make, cmp_key))
+		goto err0;
+	if (alx_bst_reorder(values->fuel_type, cmp_key))
 		goto err1;
-	if (alx_bst_init(&values->aspiration, cmp_data, false))
+	if (alx_bst_reorder(values->aspiration, cmp_key))
 		goto err2;
-	if (alx_bst_init(&values->doors, cmp_data, false))
+	if (alx_bst_reorder(values->doors, cmp_key))
 		goto err3;
-	if (alx_bst_init(&values->style, cmp_data, false))
+	if (alx_bst_reorder(values->style, cmp_key))
 		goto err4;
-	if (alx_bst_init(&values->drive_wh, cmp_data, false))
+	if (alx_bst_reorder(values->drive_wh, cmp_key))
 		goto err5;
-	if (alx_bst_init(&values->engine_pos, cmp_data, false))
+	if (alx_bst_reorder(values->engine_pos, cmp_key))
 		goto err6;
-	if (alx_bst_init(&values->engine_type, cmp_data, false))
+	if (alx_bst_reorder(values->engine_type, cmp_key))
 		goto err7;
-	if (alx_bst_init(&values->cylinders, cmp_data, false))
+	if (alx_bst_reorder(values->cylinders, cmp_key))
 		goto err8;
-	if (alx_bst_init(&values->fuel_system, cmp_data, false))
+	if (alx_bst_reorder(values->fuel_system, cmp_key))
 		goto err9;
 
 	return	0;
@@ -436,6 +452,7 @@ err2:
 	alx_bst_deinit(values->fuel_type);
 err1:
 	alx_bst_deinit(values->make);
+err0:
 	perrorx(NULL);
 	return	ENOMEM;
 }
@@ -488,12 +505,14 @@ void	parse_field		(void *restrict parsed, size_t size,
 		if (strtoi32_s(&d->row.symboling, parsed, 0, NULL)) {
 			d->row.symboling	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_NORM_LOSSES:
 		if (strtoi32_s(&d->row.norm_losses, parsed, 0, NULL)) {
 			d->row.norm_losses	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_MAKE:
@@ -521,30 +540,35 @@ void	parse_field		(void *restrict parsed, size_t size,
 		if (strtod_s(&d->row.wheel_base, parsed, NULL)) {
 			d->row.wheel_base	= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_LENGTH:
 		if (strtod_s(&d->row.length, parsed, NULL)) {
 			d->row.length		= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_WIDTH:
 		if (strtod_s(&d->row.width, parsed, NULL)) {
 			d->row.width		= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_HEIGHT:
 		if (strtod_s(&d->row.height, parsed, NULL)) {
 			d->row.height		= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_CURB_WEIGHT:
 		if (strtoi32_s(&d->row.curb_weight, parsed, 0, NULL)) {
 			d->row.curb_weight	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_ENGINE_TYPE:
@@ -557,6 +581,7 @@ void	parse_field		(void *restrict parsed, size_t size,
 		if (strtoi32_s(&d->row.engine_size, parsed, 0, NULL)) {
 			d->row.engine_size	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_FUEL_SYSTEM:
@@ -566,56 +591,62 @@ void	parse_field		(void *restrict parsed, size_t size,
 		if (strtod_s(&d->row.bore, parsed, NULL)) {
 			d->row.bore		= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_STROKE:
 		if (strtod_s(&d->row.stroke, parsed, NULL)) {
 			d->row.stroke		= nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_COMPRESSION_RATIO:
-		if (strtod_s(&d->row.compression_ratio, parsed, NULL)) {
+		if (strtod_s(&d->row.compression_ratio, parsed, NULL) < 0) {
 			d->row.compression_ratio = nan("");
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_HP:
-		if (strtoi32_s(&d->row.hp, parsed, 0, NULL)) {
+		if (strtoi32_s(&d->row.hp, parsed, 0, NULL) < 0) {
 			d->row.hp		= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_PEAK_RPM:
-		if (strtoi32_s(&d->row.peak_rpm, parsed, 0, NULL)) {
+		if (strtoi32_s(&d->row.peak_rpm, parsed, 0, NULL) < 0) {
 			d->row.peak_rpm	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_CITY_MPG:
-		if (strtoi32_s(&d->row.city_mpg, parsed, 0, NULL)) {
-			d->row.city_mpg		= INT_MIN;
+		if (strtoi32_s(&d->row.city_mpg, parsed, 0, NULL) < 0) {
+			d->row.city_mpg	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_HIWAY_MPG:
-		if (strtoi32_s(&d->row.hiway_mpg, parsed, 0, NULL)) {
+		if (strtoi32_s(&d->row.hiway_mpg, parsed, 0, NULL) < 0) {
 			d->row.hiway_mpg	= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	case DF_PRICE:
-		if (strtoi32_s(&d->row.price, parsed, 0, NULL)) {
+		if (strtoi32_s(&d->row.price, parsed, 0, NULL) < 0) {
 			d->row.price		= INT_MIN;
 			d->row.error		= true;
+			perrorx(parsed);
 		}
 		break;
 	default:
 		perrorx(parsed);
 	}
 
-	if (d->row.error)
-		perrorx(parsed);
 	d->ncol++;
 }
 

@@ -2,3 +2,5 @@ da0101
 *.s
 *.o
 data/
+auto.csv
+
